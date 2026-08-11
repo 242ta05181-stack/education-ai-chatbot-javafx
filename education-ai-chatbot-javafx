@@ -1,0 +1,412 @@
+import java.util.*;
+
+public class ChatbotEngine {
+
+```
+private final Map<String, String> responses;
+private final Map<String, List<String>> keywords;
+private final Set<String> stopWords;
+
+public ChatbotEngine() {
+    responses = new HashMap<>();
+    keywords = new HashMap<>();
+    stopWords = new HashSet<>();
+
+    loadStopWords();
+    loadFAQs();
+}
+
+/*
+ * Common words that are removed during preprocessing.
+ */
+private void loadStopWords() {
+
+    String[] words = {
+        "the", "is", "a", "an", "to", "of", "for",
+        "in", "on", "at", "and", "or", "i", "me",
+        "my", "you", "your", "can", "could", "would",
+        "please", "what", "how", "do", "does", "are",
+        "tell", "about"
+    };
+
+    stopWords.addAll(Arrays.asList(words));
+}
+
+/*
+ * Load frequently asked questions and their responses.
+ */
+private void loadFAQs() {
+
+    addIntent(
+        "greeting",
+        Arrays.asList("hello", "hi", "hey", "welcome"),
+        "Hello! I am EduBot. How can I help you with your studies?"
+    );
+
+    addIntent(
+        "study",
+        Arrays.asList("study", "studying", "learn", "learning"),
+        "A good study method is to divide your subjects into "
+        + "small topics, create a study schedule, practice regularly, "
+        + "and review difficult concepts."
+    );
+
+    addIntent(
+        "exam",
+        Arrays.asList("exam", "exams", "test", "revision", "prepare"),
+        "For exam preparation, create a study timetable, revise "
+        + "important topics, practice previous questions, and take "
+        + "regular short breaks."
+    );
+
+    addIntent(
+        "programming",
+        Arrays.asList("programming", "coding", "program", "code"),
+        "Programming is the process of creating instructions for "
+        + "a computer. Popular programming languages include Java, "
+        + "Python, C, and JavaScript."
+    );
+
+    addIntent(
+        "java",
+        Arrays.asList("java", "jdk", "jvm"),
+        "Java is an object-oriented programming language used for "
+        + "desktop applications, web applications, enterprise software, "
+        + "and many other types of applications."
+    );
+
+    addIntent(
+        "python",
+        Arrays.asList("python", "django", "pandas"),
+        "Python is a beginner-friendly programming language commonly "
+        + "used for web development, automation, data science, and AI."
+    );
+
+    addIntent(
+        "algorithm",
+        Arrays.asList("algorithm", "algorithms", "logic"),
+        "An algorithm is a step-by-step procedure used to solve "
+        + "a problem or complete a particular task."
+    );
+
+    addIntent(
+        "database",
+        Arrays.asList("database", "databases", "sql", "mysql"),
+        "A database is an organized collection of information. "
+        + "SQL databases such as MySQL and PostgreSQL commonly store "
+        + "data in tables."
+    );
+
+    addIntent(
+        "project",
+        Arrays.asList("project", "projects", "portfolio"),
+        "Projects are a great way to demonstrate your programming "
+        + "skills. Start with a small project and gradually add "
+        + "features such as databases, APIs, or graphical interfaces."
+    );
+
+    addIntent(
+        "career",
+        Arrays.asList("career", "job", "jobs", "profession"),
+        "For a technology career, build strong programming fundamentals, "
+        + "practice problem solving, create projects, and maintain a "
+        + "good GitHub portfolio."
+    );
+
+    addIntent(
+        "college",
+        Arrays.asList("college", "university", "degree"),
+        "To prepare for college, focus on your academic fundamentals, "
+        + "develop technical skills, participate in projects, and "
+        + "practice communication skills."
+    );
+
+    addIntent(
+        "assignment",
+        Arrays.asList("assignment", "homework", "task"),
+        "Break your assignment into smaller tasks. Understand the "
+        + "requirements, complete each section carefully, and test "
+        + "or review your work before submission."
+    );
+
+    addIntent(
+        "nlp",
+        Arrays.asList("nlp", "language", "natural"),
+        "NLP stands for Natural Language Processing. It is a field "
+        + "of computing that focuses on processing and analyzing "
+        + "human language."
+    );
+
+    addIntent(
+        "goodbye",
+        Arrays.asList("bye", "goodbye", "exit", "quit"),
+        "Goodbye! Keep learning and practicing. Good luck with your studies!"
+    );
+}
+
+/*
+ * Add an intent with its keywords and response.
+ */
+private void addIntent(
+        String intent,
+        List<String> intentKeywords,
+        String response) {
+
+    keywords.put(intent, intentKeywords);
+    responses.put(intent, response);
+}
+
+/*
+ * Convert text to lowercase and remove punctuation.
+ */
+private String normalize(String text) {
+
+    return text
+            .toLowerCase()
+            .replaceAll("[^a-z0-9\\s]", " ")
+            .replaceAll("\\s+", " ")
+            .trim();
+}
+
+/*
+ * Tokenize the sentence and remove stop words.
+ */
+private List<String> tokenize(String text) {
+
+    String normalized = normalize(text);
+
+    if (normalized.isEmpty()) {
+        return new ArrayList<>();
+    }
+
+    String[] words = normalized.split("\\s+");
+
+    List<String> tokens = new ArrayList<>();
+
+    for (String word : words) {
+
+        if (!stopWords.contains(word) && word.length() > 1) {
+            tokens.add(word);
+        }
+    }
+
+    return tokens;
+}
+
+/*
+ * Find the intent with the highest keyword score.
+ */
+private String detectIntent(List<String> tokens) {
+
+    String bestIntent = null;
+    int highestScore = 0;
+
+    for (Map.Entry<String, List<String>> entry
+            : keywords.entrySet()) {
+
+        int score = 0;
+
+        for (String token : tokens) {
+
+            for (String keyword : entry.getValue()) {
+
+                if (token.equals(keyword)) {
+                    score++;
+                }
+            }
+        }
+
+        if (score > highestScore) {
+            highestScore = score;
+            bestIntent = entry.getKey();
+        }
+    }
+
+    return bestIntent;
+}
+
+/*
+ * Main method used by the GUI.
+ */
+public String getResponse(String userMessage) {
+
+    if (userMessage == null ||
+            userMessage.trim().isEmpty()) {
+
+        return "Please type a question. I can help with "
+                + "education, exams, programming, Java, Python, "
+                + "algorithms, projects, and careers.";
+    }
+
+    List<String> tokens = tokenize(userMessage);
+
+    if (tokens.isEmpty()) {
+
+        return "I could not understand the question. "
+                + "Please try asking an education-related question.";
+    }
+
+    String intent = detectIntent(tokens);
+
+    if (intent == null) {
+
+        return "I'm not sure I understand that question. "
+                + "Try asking about studying, exams, programming, "
+                + "Java, Python, databases, algorithms, projects, "
+                + "college, or careers.";
+    }
+
+    return responses.get(intent);
+}
+```
+
+}
+
+
+import javafx.application.Application;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.stage.Stage;
+
+public class EducationChatbotApp extends Application {
+
+```
+private final ChatbotEngine chatbot = new ChatbotEngine();
+
+private TextArea chatArea;
+private TextField inputField;
+
+@Override
+public void start(Stage stage) {
+
+    stage.setTitle("EduBot - Education AI Chatbot");
+
+    Label title = new Label("EduBot");
+    title.setFont(Font.font("Arial", 26));
+    title.setTextFill(Color.WHITE);
+
+    Label subtitle = new Label(
+            "Education Help Assistant"
+    );
+
+    subtitle.setFont(Font.font("Arial", 14));
+    subtitle.setTextFill(Color.WHITE);
+
+    VBox header = new VBox(5, title, subtitle);
+    header.setAlignment(Pos.CENTER);
+    header.setPadding(new Insets(20));
+    header.setStyle(
+            "-fx-background-color: #4f46e5;"
+    );
+
+    chatArea = new TextArea();
+
+    chatArea.setEditable(false);
+    chatArea.setWrapText(true);
+    chatArea.setFont(Font.font("Arial", 14));
+
+    chatArea.setText(
+            "EduBot: Hello! Welcome to EduBot.\n\n"
+            + "I can help you with:\n"
+            + "• Study methods\n"
+            + "• Exam preparation\n"
+            + "• Programming\n"
+            + "• Java and Python\n"
+            + "• Algorithms\n"
+            + "• Databases\n"
+            + "• Projects\n"
+            + "• College and careers\n\n"
+    );
+
+    inputField = new TextField();
+
+    inputField.setPromptText(
+            "Type your education question..."
+    );
+
+    inputField.setOnAction(event -> sendMessage());
+
+    Button sendButton = new Button("Send");
+
+    sendButton.setPrefWidth(90);
+
+    sendButton.setStyle(
+            "-fx-background-color: #4f46e5;"
+            + "-fx-text-fill: white;"
+            + "-fx-font-weight: bold;"
+    );
+
+    sendButton.setOnAction(event -> sendMessage());
+
+    Button clearButton = new Button("Clear");
+
+    clearButton.setOnAction(event -> chatArea.clear());
+
+    HBox inputBox = new HBox(
+            10,
+            inputField,
+            sendButton,
+            clearButton
+    );
+
+    inputBox.setPadding(new Insets(10));
+    inputBox.setAlignment(Pos.CENTER);
+
+    HBox.setHgrow(inputField, Priority.ALWAYS);
+
+    VBox root = new VBox(
+            header,
+            chatArea,
+            inputBox
+    );
+
+    VBox.setVgrow(chatArea, Priority.ALWAYS);
+
+    root.setStyle(
+            "-fx-background-color: #f3f4f6;"
+    );
+
+    Scene scene = new Scene(
+            root,
+            750,
+            600
+    );
+
+    stage.setScene(scene);
+    stage.show();
+}
+
+private void sendMessage() {
+
+    String userMessage =
+            inputField.getText().trim();
+
+    if (userMessage.isEmpty()) {
+        return;
+    }
+
+    chatArea.appendText(
+            "You: " + userMessage + "\n"
+    );
+
+    String response =
+            chatbot.getResponse(userMessage);
+
+    chatArea.appendText(
+            "EduBot: " + response + "\n\n"
+    );
+
+    inputField.clear();
+}
+
+public static void main(String[] args) {
+    launch(args);
+}
+```
+
+}
